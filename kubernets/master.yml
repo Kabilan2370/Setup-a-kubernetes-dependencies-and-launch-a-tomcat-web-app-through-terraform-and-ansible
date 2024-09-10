@@ -1,0 +1,39 @@
+ 
+ - hosts: master
+   become: yes
+   tasks:
+
+    - name: initialize the cluster (this could take some time)
+      shell: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml >> cluster_initialized.log
+      args:
+        chdir: /home/ubuntu
+        creates: cluster_initialized.log
+
+    - name: create .kube directory
+      become: yes
+      become_user: ubuntu
+      file:
+        path: $HOME/.kube
+        state: directory
+        mode: 0755
+
+    - name: copy admin.conf to user's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+
+    - name: install Pod network
+      become: yes
+      become_user: ubuntu
+      shell: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml >> pod_network_setup.log
+      args:
+        chdir: $HOME
+        creates: pod_network_setup.log
+
+    - name: create an empty file for Kubeadm configuring
+      copy:
+        content: ""
+        dest: /etc/kubernetes/cluster.yaml
+        force: no
