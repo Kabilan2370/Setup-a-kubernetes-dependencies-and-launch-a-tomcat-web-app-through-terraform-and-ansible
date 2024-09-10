@@ -3,6 +3,8 @@ Establish a working environment for Kubernetes utilizing Terraform, install the 
 
 ## *![setup a master slave configuration using ansible](https://github.com/Kabilan2370/setup-a-master-slave-configuration-using-ansible)*
 
+### *![Install kubernetes dependencies manually](https://www.geeksforgeeks.org/install-kubernetes-on-ubuntu/?ref=lbp)*
+
 # Architecture of this project...
 
 ![image](kuber.png)
