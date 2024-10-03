@@ -2,10 +2,6 @@
   remote_user: ubuntu
   become: yes
   tasks:
-    - name: Set a hostname specifying strategy
-      ansible.builtin.hostname:
-        name: 
-        use: systemd
   
     - name: swapoff
       command: sudo swapoff -a
@@ -13,21 +9,22 @@
       command: sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
     - name: install container and configure
-      ansible.buildin.copy:
+      copy:
         content: ""
-        des: /etc/modules-load.d/containerd.conf
+        dest: /etc/modules-load.d/containerd.conf
         force: no
 
     - name: configure module container
-      ansible.buildin.blockinfile:
+      blockinfile:
+        path: /etc/modules-load.d/containerd.conf
         block: |
           overlay
           br_netfilter
 
     - name : Enable ipv6 configure
-      ansible.builin.copy:
+      ansible.builtin.copy:
         content: ""
-        des: /etc/sysctl.d/kubernetes.conf
+        dest: /etc/sysctl.d/kubernetes.conf
         force: no
 
     - name: Insert/Update "Match User" configuration block 
@@ -52,36 +49,34 @@
 
     - name: add Docker's APT repository
       apt_repository:
-        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        #repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+        repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }} signed-by=/etc/apt/keyrings/docker-apt-keyring.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         update_cache: yes
 
-    - name: Update repositories
-      ansible.builtin.apt:
-        name: " * " 
-        update_cache: yes
+    # - name: Update repositories
+    #   ansible.builtin.apt:
+    #     name: " * " 
+    #     update_cache: yes
     
-    - name: Install a docker
-      apt:
-        name: docker.io
-        state: present
+    # - name: Install a docker
+    #   apt:
+    #     name: docker.io
+    #     state: present
 
-    - name: Add an Apt signing key
-      apt_key:
-        url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
-        state: present
-        mode: 0644
+    - name: add Kubernetes apt-key
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+        mode: '0644'
         force: true
     
     - name: Add source repository into sources list
       ansible.builtin.apt_repository:
         repo: deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /
         state: present
-        
-    - name: Update repositories
-      ansible.builtin.apt:
-        name: " * " 
         update_cache: yes
+        
 
     - name: Install kubernetes
       apt:
@@ -105,9 +100,9 @@
     - name: container configureation
       shell: /usr/bin/containerd config default > /etc/containerd/config.toml  
     
-    - name: start a container sevice
-      ansible.builtin.service:
-        name: Containerd
-        state: started
+    - name: enable the Containerd service and start it
+      systemd:
+        name: containerd
+        state: restarted
         enabled: yes
         daemon-reload: yes
